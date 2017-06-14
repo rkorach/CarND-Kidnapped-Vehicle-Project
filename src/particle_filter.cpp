@@ -77,29 +77,11 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   }
 }
 
-void ParticleFilter::dataAssociation(std::vector<LandmarkObs>& predicted, std::vector<Map::single_landmark_s> landmark_list) {
+void dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations) {
   // TODO: Find the predicted measurement that is closest to each observed measurement and assign the 
   //   observed measurement to this particular landmark.
   // NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
   //   implement this method and use it as a helper during the updateWeights phase.
-
-
-  for (int i=0; i < predicted.size(); ++i) {
-    LandmarkObs predictedLand = predicted[i];
-    
-    double closest_dist;
-    int closest_landmark_id;
-
-    for (int j=0; j < landmark_list.size(); ++j) {
-      Map::single_landmark_s landmark = landmark_list[j];
-
-      if (j==0 || dist(predictedLand.x, predictedLand.y, landmark.x_f, landmark.y_f) < closest_dist) {
-        closest_dist = dist(predictedLand.x, predictedLand.y, landmark.x_f, landmark.y_f);
-        predicted[i].id = landmark.id_i;
-      }
-    }
-  }
-
 }
 
 
@@ -119,29 +101,37 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   double weights_sum = 0.0;
 
   for (int i=0; i<particles.size(); ++i){
-    std::vector<LandmarkObs> obs_trans;
+
+    double prob = 1.0;
 
     for (int j=0; j<observations.size(); ++j){
       // transform observation to maps coordinates
       LandmarkObs part_obs;
       part_obs.x = observations[j].x * cos(particles[i].theta) - observations[j].y * sin(particles[i].theta) + particles[i].x;
       part_obs.y = observations[j].x * sin(particles[i].theta) + observations[j].y * cos(particles[i].theta) + particles[i].y;
-      obs_trans.push_back(part_obs);
-    }
 
-    dataAssociation(obs_trans, map_landmarks.landmark_list);
+      // DATA ASSOCIATION
+      double closest_dist;
+      int closest_landmark_id;
 
-    double prob = 1.0;
-    for (int j=0; j<obs_trans.size(); ++j){
       for (int k=0; k < map_landmarks.landmark_list.size(); ++k) {
-        if (map_landmarks.landmark_list[k].id_i == obs_trans[j].id) {
+        Map::single_landmark_s landmark = map_landmarks.landmark_list[k];
+
+        if (k==0 || dist(part_obs.x, part_obs.y, landmark.x_f, landmark.y_f) < closest_dist) {
+          closest_dist = dist(part_obs.x, part_obs.y, landmark.x_f, landmark.y_f);
+          part_obs.id = landmark.id_i;
+        }
+      }
+
+      for (int k=0; k < map_landmarks.landmark_list.size(); ++k) {
+        if (map_landmarks.landmark_list[k].id_i == part_obs.id) {
           Map::single_landmark_s ldmk = map_landmarks.landmark_list[k];
           
           // exp {-1/2[(X-x)^2/sig_x^2 + (Y-y)^2/sig_y_2]}
           // -----------------------------------------------
           //       sqrt(2*M_PI*(sig_x_2 * sig_y_2))
 
-          prob *= exp(-(1/2.) * ( pow(obs_trans[j].x - ldmk.x_f, 2) / pow(std_landmark[0], 2) + pow(obs_trans[j].y - ldmk.y_f, 2) / pow(std_landmark[1], 2) ));
+          prob *= exp(-(1/2.) * ( pow(part_obs.x - ldmk.x_f, 2) / pow(std_landmark[0], 2) + pow(part_obs.y - ldmk.y_f, 2) / pow(std_landmark[1], 2) ));
           prob = prob/sqrt(2. * M_PI * (pow(std_landmark[0], 2) * pow(std_landmark[1], 2)));
         }
       }
