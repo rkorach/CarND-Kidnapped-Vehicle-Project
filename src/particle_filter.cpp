@@ -65,8 +65,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
       particles[i].y = particles[i].y + velocity/yaw_rate*(cos(particles[i].theta) - cos(particles[i].theta + yaw_rate*delta_t));
       particles[i].theta = particles[i].theta + yaw_rate*delta_t;
     } else {
-      particles[i].x = particles[i].x + velocity*cos(particles[i].theta);
-      particles[i].y = particles[i].y + velocity*sin(particles[i].theta);
+      particles[i].x = particles[i].x + velocity*cos(particles[i].theta)*delta_t;
+      particles[i].y = particles[i].y + velocity*sin(particles[i].theta)*delta_t;
       // particle.theta = particle.theta
     }
 
@@ -142,15 +142,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
           //       sqrt(2*M_PI*(sig_x_2 * sig_y_2))
 
           prob *= exp(-(1/2.) * ( pow(obs_trans[j].x - ldmk.x_f, 2) / pow(std_landmark[0], 2) + pow(obs_trans[j].y - ldmk.y_f, 2) / pow(std_landmark[1], 2) ));
-          prob = prob/sqrt(2. * M_PI * (pow(std_landmark[0], 2) * pow(std_landmark[1], 2))); 
-          if (prob == 0.0) {
-            std::cout << "obs_trans[j].x" << obs_trans[j].x << std::endl;
-            std::cout << "ldmk.x_f" << ldmk.x_f << std::endl;
-            std::cout << "std_landmark[0]" << std_landmark[0] << std::endl;
-            std::cout << "obs_trans[j].y" << obs_trans[j].y << std::endl;
-            std::cout << "ldmk.y_f" << ldmk.y_f << std::endl;
-            std::cout << "std_landmark[1]" << std_landmark[1] << std::endl;
-          }
+          prob = prob/sqrt(2. * M_PI * (pow(std_landmark[0], 2) * pow(std_landmark[1], 2)));
         }
       }
     }
